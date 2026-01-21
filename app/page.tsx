@@ -1,3 +1,4 @@
+"use client";
 /**
  * The home page for the application. It renders a simple heading to verify
  * that routing is working.
@@ -6,7 +7,6 @@
 // client component. Without this directive, Next.js will treat the page as a
 // server component and building will fail. See the Next.js App Router docs for
 // details.
-"use client";
 
 import { useState } from 'react';
 
