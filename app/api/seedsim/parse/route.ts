@@ -28,3 +28,22 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json(responsePayload);
 }
+
+/**
+ * GET /api/seedsim/parse
+ *
+ * This handler is provided for convenience so that you can open the API route
+ * directly in a browser and see the stubbed response. Because the simulation
+ * parser currently only supports POST requests with a JSON body, this GET
+ * handler ignores any query parameters and simply returns the same stub
+ * response as the POST handler.
+ */
+export async function GET() {
+  const responsePayload = {
+    patch: [],
+    assumptions: [],
+    warnings: [],
+    scenarioNameSuggestion: '',
+  };
+  return NextResponse.json(responsePayload);
+}
