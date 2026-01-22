@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { runSimulation } from "../engine";
-import { defaultScenario } from "../engine/defaultScenario";
-
-import React from "react";
+import React, { useMemo, useState } from "react";
 import LineChartCard from "../components/LineChartCard";
-import { scenarios, type ScenarioName } from "../engine/scenarios";
+
 import { runSimulation } from "../engine";
+import { scenarios, type ScenarioName } from "../engine/scenarios";
+
 
 
 function money(n: number) {
@@ -15,16 +13,18 @@ function money(n: number) {
 }
 
 export default function Page() {
-  const result = useMemo(() => runSimulation(defaultScenario), []);
 
-  const last = result.months[result.months.length - 1];
 
-const [scenarioName, setScenarioName] = React.useState<ScenarioName>("Kickstart / Proof");
+const [scenarioName, setScenarioName] = 
+  React.useState<ScenarioName>("Kickstart / Proof");
+
 const [showDelta, setShowDelta] = React.useState(true);
 
 const rawScenario = scenarios[scenarioName];
 
 const result = React.useMemo(() => runSimulation(rawScenario), [rawScenario]);
+
+
 const baselineResult = React.useMemo(() => runSimulation(scenarios["Kickstart / Proof"]), []);
 
 const months = result.months ?? [];
