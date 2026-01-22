@@ -4,6 +4,12 @@ import { useMemo } from "react";
 import { runSimulation } from "../engine";
 import { defaultScenario } from "../engine/defaultScenario";
 
+import React from "react";
+import LineChartCard from "../components/LineChartCard";
+import { scenarios, type ScenarioName } from "../engine/scenarios";
+import { runSimulation } from "../engine";
+
+
 function money(n: number) {
   return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 }
@@ -13,8 +19,92 @@ export default function Page() {
 
   const last = result.months[result.months.length - 1];
 
+const [scenarioName, setScenarioName] = React.useState<ScenarioName>("Kickstart / Proof");
+const [showDelta, setShowDelta] = React.useState(true);
+
+const rawScenario = scenarios[scenarioName];
+
+const result = React.useMemo(() => runSimulation(rawScenario), [rawScenario]);
+const baselineResult = React.useMemo(() => runSimulation(scenarios["Kickstart / Proof"]), []);
+
+const months = result.months ?? [];
+const last = months[months.length - 1];
+
+const baseMonths = baselineResult.months ?? [];
+const baseLast = baseMonths[baseMonths.length - 1];
+
+const isBaseline = scenarioName === "Kickstart / Proof";
+
+const chartData = months.map((m) => ({ month: m.month, ...m }));
+
+const deltaSurplus = (last?.surplus_total_usdc ?? 0) - (baseLast?.surplus_total_usdc ?? 0);
+const deltaMissions = (last?.missions_funded_to_date_usdc ?? 0) - (baseLast?.missions_funded_to_date_usdc ?? 0);
+const deltaTreasury = (last?.treasury_usdc ?? 0) - (baseLast?.treasury_usdc ?? 0);
+
+const seedPrincipal = rawScenario.participants.seedkeys.reduce((a, k) => a + k.amount_usdc, 0);
+const giverPrincipal = rawScenario.participants.giverkeys.reduce((a, g) => a + g.amount_usdc, 0);
+
+
   return (
     <main className="min-h-screen p-6 space-y-6">
+{/* Scenario selector */}
+<div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+  <label style={{ fontSize: 13, fontWeight: 700 }}>Scenario</label>
+  <select
+    value={scenarioName}
+    onChange={(e) => setScenarioName(e.target.value as ScenarioName)}
+    style={{ border: "1px solid rgba(0,0,0,0.15)", borderRadius: 10, padding: "8px 10px", background: "white" }}
+  >
+    {Object.keys(scenarios).map((name) => (
+      <option key={name} value={name}>
+        {name}
+      </option>
+    ))}
+  </select>
+
+  {!isBaseline && (
+    <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8, fontSize: 13 }}>
+      <input type="checkbox" checked={showDelta} onChange={(e) => setShowDelta(e.target.checked)} />
+      Show Δ vs baseline (final month)
+    </label>
+  )}
+</div>
+
+{/* Scenario summary */}
+<div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 16, background: "white", marginBottom: 16 }}>
+  <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Scenario Summary</div>
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, fontSize: 13 }}>
+    <div><strong>Horizon (months):</strong> {rawScenario.meta.horizonMonths}</div>
+    <div><strong>Initial Market Cap:</strong> {rawScenario.market.initialMarketCapUSD.toLocaleString()}</div>
+    <div><strong>SeedKey Principal:</strong> {seedPrincipal.toLocaleString()}</div>
+    <div><strong>GiverKey Principal:</strong> {giverPrincipal.toLocaleString()}</div>
+    <div><strong>Treasury %:</strong> {(rawScenario.policy.treasury_pct * 100).toFixed(0)}%</div>
+    <div><strong>Distribution Cap %:</strong> {(rawScenario.policy.system_distribution_cap_pct * 100).toFixed(0)}%</div>
+    <div><strong>Split:</strong> M {rawScenario.policy.missions_pct} / P {rawScenario.policy.participants_pct} / A {rawScenario.policy.affiliates_pct} / R {rawScenario.policy.reserve_pct}</div>
+  </div>
+</div>
+
+{/* Delta card */}
+{!isBaseline && showDelta && (
+  <div style={{ border: "1px dashed rgba(0,0,0,0.25)", borderRadius: 12, padding: 12, marginBottom: 16, fontSize: 13 }}>
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>Δ vs Kickstart / Proof</div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 8 }}>
+      <div><strong>Δ Surplus Total:</strong> {deltaSurplus.toLocaleString()}</div>
+      <div><strong>Δ Missions Funded:</strong> {deltaMissions.toLocaleString()}</div>
+      <div><strong>Δ Treasury:</strong> {deltaTreasury.toLocaleString()}</div>
+    </div>
+  </div>
+)}
+
+{/* Charts */}
+<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, marginBottom: 16 }}>
+  <LineChartCard title="Price" data={chartData} xKey="month" yKey="price_usd" valuePrefix="$" />
+  <LineChartCard title="Surplus Total" data={chartData} xKey="month" yKey="surplus_total_usdc" valuePrefix="$" />
+  <LineChartCard title="Missions Funded To Date" data={chartData} xKey="month" yKey="missions_funded_to_date_usdc" valuePrefix="$" />
+</div>
+
+
+
       <header className="space-y-1">
         <h1 className="text-3xl font-semibold">SeedSIM Studio</h1>
         <p className="text-sm text-gray-600">
