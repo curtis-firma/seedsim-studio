@@ -3,9 +3,8 @@
 import React, { useMemo, useState } from "react";
 import LineChartCard from "../components/LineChartCard";
 
-import { runSimulation } from "../engine";
-import { scenarios, type ScenarioName } from "../engine/scenarios";
-
+import { runSimulation } from "../engine/index";
+import { scenarios, type ScenarioName } from "../engine/scenarios/index";
 
 
 function money(n: number) {
