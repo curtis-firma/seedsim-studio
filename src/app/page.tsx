@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import LineChartCard from "../components/LineChartCard";
 import { runSimulation } from "../engine/simulate";
-import { scenarios, type ScenarioName } from "../engine/scenarios/index";
+import { scenarios, type ScenarioName } from "../engine/scenarios";
 import type { Scenario } from "../engine/types";
-
-type ScaleInputs = {
-  seedbases_count: number;
-  activators_total: number;
-  envoys_total: number;
-  giverkeys_total: number;
-  avg_commitment_usdc: number;
-  giverkey_usdc_total: number;
-};
+import {
+  ChartsView,
+  CockpitOverview,
+  type ScaleInputs,
+  VaultView,
+} from "../views";
 
 const BASELINE_SCENARIO: ScenarioName = "Kickstart / Proof";
 
@@ -115,6 +111,9 @@ function applyScaleToScenario(baseScenario: Scenario, scale: ScaleInputs): Scena
 export default function Page() {
   const [scenarioName, setScenarioName] =
     useState<ScenarioName>(BASELINE_SCENARIO);
+  const [activeView, setActiveView] = useState<"overview" | "charts" | "vault">(
+    "overview"
+  );
   const [showDelta, setShowDelta] = useState(true);
   const rawScenario = scenarios[scenarioName];
   const baselineScenario = scenarios[BASELINE_SCENARIO];
@@ -258,324 +257,95 @@ export default function Page() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-6 lg:self-start">
-            <div className="space-y-1">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Scenario + Scale
-              </div>
-              <p className="text-sm text-slate-600">
-                Pick a preset then scale the participant counts and commitments.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="text-sm font-semibold text-slate-700">Scenario Preset</div>
-              <select
-                value={scenarioName}
-                onChange={(event) => setScenarioName(event.target.value as ScenarioName)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              >
-                {Object.keys(scenarios).map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-4">
-              <div className="text-sm font-semibold text-slate-700">Scale Panel</div>
-              <p className="text-xs text-slate-500">
-                This scales the preset scenario before simulation.
-              </p>
-              <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                <label className="flex flex-col gap-1">
-                  Seedbases Count
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.seedbases_count}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        seedbases_count: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Activators Total
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.activators_total}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        activators_total: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Envoys Total
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.envoys_total}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        envoys_total: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  GiverKeys Total
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.giverkeys_total}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        giverkeys_total: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  Avg Commitment (USDC)
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.avg_commitment_usdc}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        avg_commitment_usdc: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  GiverKey USDC Total
-                  <input
-                    type="number"
-                    min={0}
-                    value={draftScale.giverkey_usdc_total}
-                    onChange={(event) =>
-                      setDraftScale((prev) => ({
-                        ...prev,
-                        giverkey_usdc_total: toNumber(event.target.value),
-                      }))
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
-                  />
-                </label>
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDraftScale(scenarioToScale(rawScenario))}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-700"
-                >
-                  Reset to preset
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAppliedScale(draftScale);
-                    setLastAppliedAt(Date.now());
-                  }}
-                  disabled={!hasScaleChanges}
-                  className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  Simulate
-                </button>
-                <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      hasScaleChanges ? "bg-amber-400" : "bg-emerald-500"
-                    }`}
-                  />
-                  {hasScaleChanges
-                    ? "Changes pending"
-                    : lastAppliedAt
-                    ? "Applied"
-                    : "Applied"}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-semibold text-slate-700">KPIs</div>
-                <div className="text-xs text-slate-500">
-                  Final month outputs for {scenarioName}
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={showDelta}
-                  onChange={(event) => setShowDelta(event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-slate-800"
-                />
-                Δ vs baseline
-              </label>
-            </div>
-
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {kpis.map((kpi) => (
-                <div
-                  key={kpi.label}
-                  className="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      {kpi.label}
-                    </div>
-                    <div className="mt-2 text-2xl font-semibold text-slate-900">
-                      {kpi.format(kpi.value)}
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-1 text-xs text-slate-500">
-                    <div>Last month: {kpi.format(kpi.previousValue ?? 0)}</div>
-                    {showDelta && (
-                      <div>
-                        Δ vs baseline: {formatDelta(kpi.delta, kpi.format)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-semibold text-slate-700">Vault Snapshot</div>
-                  <div className="text-xs text-slate-500">
-                    End-of-period positions across the vault.
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {vaultSnapshot
-                  .filter((item) => item.value !== undefined)
-                  .map((item) => (
-                    <div
-                      key={item.label}
-                      className="rounded-xl border border-slate-100 bg-slate-50 p-4"
-                    >
-                      <div className="text-xs font-semibold text-slate-500">
-                        {item.label}
-                      </div>
-                      <div className="mt-2 text-lg font-semibold text-slate-900">
-                        {money(item.value ?? 0)}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <LineChartCard
-                title="Price"
-                data={chartData}
-                xKey="month"
-                yKey="price_usd"
-                valuePrefix="$"
-              />
-              <LineChartCard
-                title="Surplus Total"
-                data={chartData}
-                xKey="month"
-                yKey="surplus_total_usdc"
-                valuePrefix="$"
-              />
-              <LineChartCard
-                title="Missions Funded To Date"
-                data={chartData}
-                xKey="month"
-                yKey="missions_funded_to_date_usdc"
-                valuePrefix="$"
-              />
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-700">
-                Monthly Outputs (preview)
-              </h2>
-              <div className="mt-4 overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
-                      <th className="py-2 pr-4">Month</th>
-                      <th className="py-2 pr-4">Price</th>
-                      <th className="py-2 pr-4">Surplus</th>
-                      <th className="py-2 pr-4">Treasury</th>
-                      <th className="py-2 pr-4">Missions Pool</th>
-                      <th className="py-2 pr-4">Participants Pool</th>
-                      <th className="py-2 pr-4">Affiliates Pool</th>
-                      <th className="py-2 pr-4">Reserve Pool</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.months.map((month) => (
-                      <tr key={month.month} className="border-t border-slate-100">
-                        <td className="py-2 pr-4 font-semibold text-slate-700">
-                          {month.month}
-                        </td>
-                        <td className="py-2 pr-4">
-                          ${month.price_usd.toFixed(4)}
-                        </td>
-                        <td className="py-2 pr-4">{money(month.surplus_total_usdc)}</td>
-                        <td className="py-2 pr-4">{money(month.treasury_usdc)}</td>
-                        <td className="py-2 pr-4">
-                          {money(month.pool_missions_usdc)}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {money(month.pool_participants_usdc)}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {money(month.pool_affiliates_usdc)}
-                        </td>
-                        <td className="py-2 pr-4">
-                          {money(month.pool_reserve_usdc)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-700">Explain the Math</h2>
-              <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-slate-600">
-                {result.explain.map((line, idx) => (
-                  <li key={idx}>
-                    <span className="font-semibold text-slate-800">
-                      {line.step}:
-                    </span>{" "}
-                    {line.detail}
-                  </li>
-                ))}
-              </ol>
-            </section>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            View Mode
           </div>
-        </section>
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1 text-xs font-semibold text-slate-600">
+            {[
+              { id: "overview", label: "Overview" },
+              { id: "charts", label: "Charts" },
+              { id: "vault", label: "Vault" },
+            ].map((view) => (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() =>
+                  setActiveView(view.id as "overview" | "charts" | "vault")
+                }
+                className={`rounded-full px-4 py-1.5 transition ${
+                  activeView === view.id
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeView === "overview" ? (
+          <CockpitOverview
+            scenarioName={scenarioName}
+            scenarioOptions={Object.keys(scenarios)}
+            onScenarioChange={(value) => setScenarioName(value as ScenarioName)}
+            draftScale={draftScale}
+            onDraftScaleChange={(key, value) =>
+              setDraftScale((prev) => ({
+                ...prev,
+                [key]: toNumber(String(value)),
+              }))
+            }
+            onResetScale={() => setDraftScale(scenarioToScale(rawScenario))}
+            onApplyScale={() => {
+              setAppliedScale(draftScale);
+              setLastAppliedAt(Date.now());
+            }}
+            hasScaleChanges={hasScaleChanges}
+            lastAppliedAt={lastAppliedAt}
+            kpis={kpis}
+            showDelta={showDelta}
+            onToggleDelta={setShowDelta}
+            vaultSnapshot={vaultSnapshot}
+            formatDelta={formatDelta}
+            money={money}
+          />
+        ) : null}
+
+        {activeView === "charts" ? (
+          <ChartsView
+            chartData={chartData}
+            months={months}
+            explain={result.explain ?? []}
+            money={money}
+          />
+        ) : null}
+
+        {activeView === "vault" ? (
+          <VaultView
+            priceUsd={last?.price_usd ?? 0}
+            metrics={[
+              { key: "principal", label: "Principal Total", usdc: totalPrincipal },
+              {
+                key: "surplus",
+                label: "Surplus Total",
+                usdc: last?.surplus_total_usdc ?? 0,
+              },
+              {
+                key: "treasury",
+                label: "Treasury",
+                usdc: last?.treasury_usdc ?? 0,
+              },
+              {
+                key: "missions",
+                label: "Missions Funded To Date",
+                usdc: last?.missions_funded_to_date_usdc ?? 0,
+              },
+            ]}
+            money={money}
+          />
+        ) : null}
       </div>
     </main>
   );
