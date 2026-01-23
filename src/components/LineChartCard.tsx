@@ -38,10 +38,12 @@ export default function LineChartCard({
   stroke = "#111827",
 }: Props) {
   return (
-    <div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 16, background: "white", minHeight: 260 }}>
-      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>{title}</div>
+    <div className="min-h-[260px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+        {title}
+      </div>
 
-      <div style={{ width: "100%", height: 210 }}>
+      <div className="mt-3 h-[210px] w-full">
         <ResponsiveContainer>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" />
