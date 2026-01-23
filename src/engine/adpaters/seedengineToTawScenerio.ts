@@ -70,10 +70,10 @@ export function seedengineToRawScenario(input: SeedEngineInput): Scenario {
   raw.policy.treasury_pct = input.policy.treasury_pct_of_surplus;
   raw.policy.system_distribution_cap_pct =
     input.policy.distribution_cap_pct_of_surplus;
-  raw.policy.missions_pct = input.policy.splits.missions;
-  raw.policy.participants_pct = input.policy.splits.participants;
-  raw.policy.affiliates_pct = input.policy.splits.affiliates;
-  raw.policy.reserve_pct = input.policy.splits.reserve;
+  raw.policy.missions_pct = input.policy.splits.missions_pct;
+  raw.policy.participants_pct = input.policy.splits.participants_pct;
+  raw.policy.affiliates_pct = input.policy.splits.affiliates_pct;
+  raw.policy.reserve_pct = input.policy.splits.reserve_pct;
 
   return raw;
 }

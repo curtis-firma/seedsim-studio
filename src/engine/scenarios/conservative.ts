@@ -1,6 +1,7 @@
 import { kickstartProof } from "./kickstartProof";
+import type { Scenario } from "../types";
 
-export const conservative = {
+export const conservative: Scenario = {
   ...kickstartProof,
   meta: { ...kickstartProof.meta, name: "Conservative" },
   market: {

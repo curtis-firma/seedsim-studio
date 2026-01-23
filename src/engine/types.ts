@@ -29,7 +29,7 @@ export type GiverKey = {
 };
 
 export type Policy = {
-  treasury_pct: 0.1;                 // fixed
+  treasury_pct: number;                // typically 0.1 (10%)
   system_distribution_cap_pct: number; // default 0.65
   missions_pct: number;              // default 0.45
   participants_pct: number;          // default 0.30

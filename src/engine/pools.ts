@@ -2,7 +2,7 @@ export function distributableSurplus(total_surplus: number, cap_pct: number): nu
   return Math.min(total_surplus, cap_pct * total_surplus);
 }
 
-export function treasuryTake(distributable_surplus: number, treasury_pct: 0.1): number {
+export function treasuryTake(distributable_surplus: number, treasury_pct: number): number {
   return distributable_surplus * treasury_pct;
 }
 

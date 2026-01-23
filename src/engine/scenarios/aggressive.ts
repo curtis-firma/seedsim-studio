@@ -1,6 +1,7 @@
 import { kickstartProof } from "./kickstartProof";
+import type { Scenario } from "../types";
 
-export const aggressive = {
+export const aggressive: Scenario = {
   ...kickstartProof,
   meta: { ...kickstartProof.meta, name: "Aggressive" },
   market: {

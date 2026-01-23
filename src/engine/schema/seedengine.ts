@@ -140,6 +140,11 @@ export type MarketAssumptions = {
   };
 
   /**
+   * Optional market condition label
+   */
+  marketCondition?: "bearish" | "neutral" | "bullish";
+
+  /**
    * Baseline yield assumption on USDC in vault/treasury (APR).
    * Example: 0.04 for 4%.
    */
