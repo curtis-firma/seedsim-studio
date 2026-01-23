@@ -4,8 +4,9 @@ import React, { useMemo, useState } from "react";
 import LineChartCard from "../components/LineChartCard";
 import { seedengineToRawScenario } from "../engine/adapters/seedengineToRawScenario";
 
-import { runSimulation } from "../engine/index";
-import { scenarios, type ScenarioName } from "../engine/scenarios/index";
+import { runSimulation } from "../engine/simulate";
+import { scenarios, type ScenarioName } from "../engine/scenarios";
+type Scenario = any;
 
 
 function money(n: number) {

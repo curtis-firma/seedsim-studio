@@ -1,0 +1,377 @@
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 498dfdf..0067f7f 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -1,110 +1,224 @@
+ "use client";
+ 
+-import React, { useMemo, useState } from "react";
++import { useEffect, useMemo, useState } from "react";
+ import LineChartCard from "../components/LineChartCard";
+-import { seedengineToRawScenario } from "../engine/adapters/seedengineToRawScenario";
+-
+ import { runSimulation } from "../engine/index";
+ import { scenarios, type ScenarioName } from "../engine/scenarios/index";
++import type { Scenario } from "../engine/types";
++
++type ScaleInputs = {
++  seedbases_count: number;
++  activators_total: number;
++  envoys_total: number;
++  giverkeys_total: number;
++  avg_commitment_usdc: number;
++  giverkey_usdc_total: number;
++};
+ 
++const BASELINE_SCENARIO: ScenarioName = "Kickstart / Proof";
+ 
+ function money(n: number) {
+-  return n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
++  return n.toLocaleString(undefined, {
++    style: "currency",
++    currency: "USD",
++    maximumFractionDigits: 0,
++  });
+ }
+ 
+-export default function Page() {
++function toNumber(value: string) {
++  const parsed = Number(value);
++  return Number.isFinite(parsed) ? parsed : 0;
++}
+ 
++function scenarioToScale(scenario: Scenario): ScaleInputs {
++  const seedbases_count = scenario.structure.seedbases.length;
++  const activators_total = scenario.participants.seedkeys.length;
++  const envoys_total = scenario.structure.missions.length;
++  const giverkeys_total = scenario.participants.giverkeys.length;
++  const totalCommitment = scenario.participants.seedkeys.reduce(
++    (sum, key) => sum + key.amount_usdc,
++    0
++  );
++  const avg_commitment_usdc =
++    activators_total > 0 ? totalCommitment / activators_total : 0;
++  const giverkey_usdc_total = scenario.participants.giverkeys.reduce(
++    (sum, key) => sum + key.amount_usdc,
++    0
++  );
+ 
+-const [scenarioName, setScenarioName] = 
+-  React.useState<ScenarioName>("Kickstart / Proof");
++  return {
++    seedbases_count,
++    activators_total,
++    envoys_total,
++    giverkeys_total,
++    avg_commitment_usdc,
++    giverkey_usdc_total,
++  };
++}
+ 
+-const [showDelta, setShowDelta] = React.useState(true);
++function applyScaleToScenario(baseScenario: Scenario, scale: ScaleInputs): Scenario {
++  const scenario: Scenario = JSON.parse(JSON.stringify(baseScenario));
+ 
+-const rawScenario = scenarios[scenarioName];
++  const seedbasesCount = Math.max(0, Math.floor(scale.seedbases_count));
++  const envoysTotal = Math.max(0, Math.floor(scale.envoys_total));
++  const activatorsTotal = Math.max(0, Math.floor(scale.activators_total));
++  const giverkeysTotal = Math.max(0, Math.floor(scale.giverkeys_total));
++  const avgCommitment = Math.max(0, scale.avg_commitment_usdc);
++  const giverkeyTotal = Math.max(0, scale.giverkey_usdc_total);
+ 
+-const result = React.useMemo(() => runSimulation(rawScenario), [rawScenario]);
++  const baseMission = scenario.structure.missions[0];
++  const missions = Array.from({ length: envoysTotal }, (_, index) => {
++    const missionTemplate =
++      scenario.structure.missions[index % scenario.structure.missions.length] ??
++      baseMission;
++    return {
++      id: `M${index + 1}`,
++      name: missionTemplate?.name ?? `Mission ${index + 1}`,
++      cap_usdc: missionTemplate?.cap_usdc ?? 0,
++      allowReapplyWhenFilled: missionTemplate?.allowReapplyWhenFilled ?? true,
++    };
++  });
+ 
++  const missionIds = missions.map((mission) => mission.id);
++  scenario.structure.missions = missions;
++  scenario.structure.seedbases = Array.from({ length: seedbasesCount }, (_, index) => ({
++    id: `SB${index + 1}`,
++    name: `Seedbase ${index + 1}`,
++    mission_ids: missionIds,
++  }));
+ 
+-const baselineResult = React.useMemo(() => runSimulation(scenarios["Kickstart / Proof"]), []);
++  const seedbaseId = scenario.structure.seedbases[0]?.id ?? "SB1";
++  const seedkeyTemplate = scenario.participants.seedkeys[0];
++  scenario.participants.seedkeys = Array.from({ length: activatorsTotal }, (_, index) => ({
++    id: `S${index + 1}`,
++    amount_usdc: avgCommitment,
++    term: seedkeyTemplate?.term ?? "5y",
++    seedbase_id: seedbaseId,
++    entry_price_usd: seedkeyTemplate?.entry_price_usd ?? 0,
++  }));
+ 
+-const months = result.months ?? [];
+-const last = months[months.length - 1];
++  const giverkeyAmount = giverkeysTotal > 0 ? giverkeyTotal / giverkeysTotal : 0;
++  scenario.participants.giverkeys = Array.from({ length: giverkeysTotal }, (_, index) => ({
++    id: `G${index + 1}`,
++    amount_usdc: giverkeyAmount,
++    month: 0,
++  }));
+ 
+-const baseMonths = baselineResult.months ?? [];
+-const baseLast = baseMonths[baseMonths.length - 1];
++  return scenario;
++}
+ 
+-const isBaseline = scenarioName === "Kickstart / Proof";
++export default function Page() {
++  const [scenarioName, setScenarioName] =
++    useState<ScenarioName>(BASELINE_SCENARIO);
++  const [showDelta, setShowDelta] = useState(true);
++  const rawScenario = scenarios[scenarioName];
++  const baselineScenario = scenarios[BASELINE_SCENARIO];
+ 
+-const chartData = months.map((m) => ({ month: m.month, ...m }));
++  const [draftScale, setDraftScale] = useState<ScaleInputs>(() =>
++    scenarioToScale(rawScenario)
++  );
++  const [appliedScale, setAppliedScale] = useState<ScaleInputs>(() =>
++    scenarioToScale(rawScenario)
++  );
+ 
+-const deltaSurplus = (last?.surplus_total_usdc ?? 0) - (baseLast?.surplus_total_usdc ?? 0);
+-const deltaMissions = (last?.missions_funded_to_date_usdc ?? 0) - (baseLast?.missions_funded_to_date_usdc ?? 0);
+-const deltaTreasury = (last?.treasury_usdc ?? 0) - (baseLast?.treasury_usdc ?? 0);
++  useEffect(() => {
++    const nextScale = scenarioToScale(rawScenario);
++    setDraftScale(nextScale);
++    setAppliedScale(nextScale);
++  }, [rawScenario]);
+ 
+-const seedPrincipal = rawScenario.participants.seedkeys.reduce((a, k) => a + k.amount_usdc, 0);
+-const giverPrincipal = rawScenario.participants.giverkeys.reduce((a, g) => a + g.amount_usdc, 0);
++  const scaledScenario = useMemo(
++    () => applyScaleToScenario(rawScenario, appliedScale),
++    [rawScenario, appliedScale]
++  );
+ 
++  const result = useMemo(() => runSimulation(scaledScenario), [scaledScenario]);
++  const baselineResult = useMemo(
++    () => runSimulation(baselineScenario),
++    [baselineScenario]
++  );
+ 
+-  return (
+-    <main className="min-h-screen p-6 space-y-6">
+-{/* Scenario selector */}
+-<div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+-  <label style={{ fontSize: 13, fontWeight: 700 }}>Scenario</label>
+-  <select
+-    value={scenarioName}
+-    onChange={(e) => setScenarioName(e.target.value as ScenarioName)}
+-    style={{ border: "1px solid rgba(0,0,0,0.15)", borderRadius: 10, padding: "8px 10px", background: "white" }}
+-  >
+-    {Object.keys(scenarios).map((name) => (
+-      <option key={name} value={name}>
+-        {name}
+-      </option>
+-    ))}
+-  </select>
+-
+-  {!isBaseline && (
+-    <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8, fontSize: 13 }}>
+-      <input type="checkbox" checked={showDelta} onChange={(e) => setShowDelta(e.target.checked)} />
+-      Show Δ vs baseline (final month)
+-    </label>
+-  )}
+-</div>
+-
+-{/* Scenario summary */}
+-<div style={{ border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 16, background: "white", marginBottom: 16 }}>
+-  <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>Scenario Summary</div>
+-  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, fontSize: 13 }}>
+-    <div><strong>Horizon (months):</strong> {rawScenario.ma…1926 tokens truncated…               />
++              </label>
++              <label className="flex flex-col gap-1">
++                Envoys Total
++                <input
++                  type="number"
++                  min={0}
++                  value={draftScale.envoys_total}
++                  onChange={(event) =>
++                    setDraftScale((prev) => ({
++                      ...prev,
++                      envoys_total: toNumber(event.target.value),
++                    }))
++                  }
++                  className="rounded-lg border border-gray-200 px-3 py-2"
++                />
++              </label>
++              <label className="flex flex-col gap-1">
++                GiverKeys Total
++                <input
++                  type="number"
++                  min={0}
++                  value={draftScale.giverkeys_total}
++                  onChange={(event) =>
++                    setDraftScale((prev) => ({
++                      ...prev,
++                      giverkeys_total: toNumber(event.target.value),
++                    }))
++                  }
++                  className="rounded-lg border border-gray-200 px-3 py-2"
++                />
++              </label>
++              <label className="flex flex-col gap-1">
++                Avg Commitment (USDC)
++                <input
++                  type="number"
++                  min={0}
++                  value={draftScale.avg_commitment_usdc}
++                  onChange={(event) =>
++                    setDraftScale((prev) => ({
++                      ...prev,
++                      avg_commitment_usdc: toNumber(event.target.value),
++                    }))
++                  }
++                  className="rounded-lg border border-gray-200 px-3 py-2"
++                />
++              </label>
++              <label className="flex flex-col gap-1">
++                GiverKey USDC Total
++                <input
++                  type="number"
++                  min={0}
++                  value={draftScale.giverkey_usdc_total}
++                  onChange={(event) =>
++                    setDraftScale((prev) => ({
++                      ...prev,
++                      giverkey_usdc_total: toNumber(event.target.value),
++                    }))
++                  }
++                  className="rounded-lg border border-gray-200 px-3 py-2"
++                />
++              </label>
++            </div>
++            <button
++              type="button"
++              onClick={() => setAppliedScale(draftScale)}
++              className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white"
++            >
++              Simulate
++            </button>
++          </div>
++        </aside>
++
++        <div className="space-y-6">
++          <div className="flex items-center justify-between gap-4">
++            <div>
++              <div className="text-sm font-semibold text-gray-700">KPIs</div>
++              <div className="text-xs text-gray-500">
++                Final month outputs for {scenarioName}
++              </div>
++            </div>
++            <label className="flex items-center gap-2 text-xs text-gray-600">
++              <input
++                type="checkbox"
++                checked={showDelta}
++                onChange={(event) => setShowDelta(event.target.checked)}
++                className="h-4 w-4"
++              />
++              Δ vs baseline
++            </label>
++          </div>
++
++          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
++            {kpis.map((kpi) => (
++              <div key={kpi.label} className="rounded-xl border bg-white p-4 shadow-sm">
++                <div className="text-xs text-gray-500">{kpi.label}</div>
++                <div className="text-xl font-semibold">{kpi.format(kpi.value)}</div>
++                {showDelta && (
++                  <div className="text-xs text-gray-500">
++                    Δ {kpi.format(kpi.delta)}
++                  </div>
++                )}
++              </div>
++            ))}
++          </section>
++
++          <section className="rounded-2xl border bg-white p-5 shadow-sm">
++            <div className="text-sm font-semibold text-gray-700">Vault Snapshot</div>
++            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
++              {vaultSnapshot
++                .filter((item) => item.value !== undefined)
++                .map((item) => (
++                  <div key={item.label} className="rounded-xl border p-4">
++                    <div className="text-xs text-gray-500">{item.label}</div>
++                    <div className="text-lg font-semibold">
++                      {money(item.value ?? 0)}
++                    </div>
++                  </div>
++                ))}
++            </div>
++          </section>
++
++          <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
++            <LineChartCard title="Price" data={chartData} xKey="month" yKey="price_usd" valuePrefix="$" />
++            <LineChartCard
++              title="Surplus Total"
++              data={chartData}
++              xKey="month"
++              yKey="surplus_total_usdc"
++              valuePrefix="$"
++            />
++            <LineChartCard
++              title="Missions Funded To Date"
++              data={chartData}
++              xKey="month"
++              yKey="missions_funded_to_date_usdc"
++              valuePrefix="$"
++            />
++          </section>
+         </div>
+       </section>
+ 
+@@ -148,16 +433,16 @@ const giverPrincipal = rawScenario.participants.giverkeys.reduce((a, g) => a + g
+               </tr>
+             </thead>
+             <tbody>
+-              {result.months.map((m) => (
+-                <tr key={m.month} className="border-b">
+-                  <td className="py-2 pr-4">{m.month}</td>
+-                  <td className="py-2 pr-4">${m.price_usd.toFixed(4)}</td>
+-                  <td className="py-2 pr-4">{money(m.surplus_total_usdc)}</td>
+-                  <td className="py-2 pr-4">{money(m.treasury_usdc)}</td>
+-                  <td className="py-2 pr-4">{money(m.pool_missions_usdc)}</td>
+-                  <td className="py-2 pr-4">{money(m.pool_participants_usdc)}</td>
+-                  <td className="py-2 pr-4">{money(m.pool_affiliates_usdc)}</td>
+-                  <td className="py-2 pr-4">{money(m.pool_reserve_usdc)}</td>
++              {result.months.map((month) => (
++                <tr key={month.month} className="border-b">
++                  <td className="py-2 pr-4">{month.month}</td>
++                  <td className="py-2 pr-4">${month.price_usd.toFixed(4)}</td>
++                  <td className="py-2 pr-4">{money(month.surplus_total_usdc)}</td>
++                  <td className="py-2 pr-4">{money(month.treasury_usdc)}</td>
++                  <td className="py-2 pr-4">{money(month.pool_missions_usdc)}</td>
++                  <td className="py-2 pr-4">{money(month.pool_participants_usdc)}</td>
++                  <td className="py-2 pr-4">{money(month.pool_affiliates_usdc)}</td>
++                  <td className="py-2 pr-4">{money(month.pool_reserve_usdc)}</td>
+                 </tr>
+               ))}
+             </tbody>
+@@ -168,9 +453,9 @@ const giverPrincipal = rawScenario.participants.giverkeys.reduce((a, g) => a + g
+       <section className="rounded-xl border p-4">
+         <h2 className="text-lg font-semibold mb-3">Explain the Math</h2>
+         <ol className="list-decimal pl-5 space-y-1 text-sm">
+-          {result.explain.map((e, idx) => (
++          {result.explain.map((line, idx) => (
+             <li key={idx}>
+-              <span className="font-semibold">{e.step}:</span> {e.detail}
++              <span className="font-semibold">{line.step}:</span> {line.detail}
+             </li>
+           ))}
+         </ol>
